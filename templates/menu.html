@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprinkles Menu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        .bg-custom-yellow { background-color: #fffbeb; }
+        .text-custom-brown { color: #78350f; }
+        .bg-custom-light-yellow { background-color: #fef3c7; }
+        .font-fancy { font-family: 'Dancing Script', cursive; }
+        .selected { background-color: white; }
+    </style>
+</head>
+<body class="bg-custom-yellow font-roboto flex flex-col min-h-screen">
+    <div class="fixed top-0 left-0 right-0 bg-custom-yellow p-4 shadow-md z-10">
+        <div class="text-center">
+            <h1 class="text-5xl font-fancy text-custom-brown">Sprinkles</h1>
+            <h2 class="text-2xl font-bold text-custom-brown">Menu</h2>
+        </div>
+        <div class="flex flex-wrap justify-center mt-4 space-x-1 space-y-1">
+            <button id="all-btn" class="text-custom-brown font-bold py-1 px-3 rounded-full selected" onclick="filterMenu('all')">All</button>
+            <button id="shake-btn" class="text-custom-brown font-bold py-1 px-3 bg-custom-light-yellow rounded-full" onclick="filterMenu('shake')">Shake</button>
+            <button id="juice-btn" class="text-custom-brown font-bold py-1 px-3 bg-custom-light-yellow rounded-full" onclick="filterMenu('juice')">Juice</button>
+            <button id="fruit-salad-btn" class="text-custom-brown font-bold py-1 px-3 bg-custom-light-yellow rounded-full" onclick="filterMenu('fruit-salad')">Fruit Salad</button>
+            <button id="falooda-btn" class="text-custom-brown font-bold py-1 px-3 bg-custom-light-yellow rounded-full" onclick="filterMenu('falooda')">Falooda</button>
+            <button id="snacks-btn" class="text-custom-brown font-bold py-1 px-3 bg-custom-light-yellow rounded-full" onclick="filterMenu('snacks')">Snacks</button>
+            <button id="other-btn" class="text-custom-brown font-bold py-1 px-3 bg-custom-light-yellow rounded-full" onclick="filterMenu('other')">Other</button>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 flex-grow mt-48">
+        <div id="menu-items" class="space-y-4">
+            {% for item in menu_items %}
+            <div class="menu-item flex justify-between items-center bg-white p-4 rounded-lg shadow" data-category="{{ item[2]|lower|replace(' ', '-') }}">
+                <div>
+                    <h3 class="text-lg font-bold text-custom-brown">{{ item[1] }}</h3>
+                    <p class="text-sm text-custom-brown">{{ item[3] }}</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <p class="text-lg font-bold text-custom-brown">₹{{ item[4] }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        function filterMenu(category) {
+            const items = document.querySelectorAll('.menu-item');
+            items.forEach(item => {
+                if (category === 'all' || item.getAttribute('data-category') === category) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            document.querySelectorAll('button').forEach(button => {
+                button.classList.remove('selected');
+                button.classList.remove('bg-white');
+                button.classList.add('bg-custom-light-yellow');
+            });
+
+            const btn = document.getElementById(`${category}-btn`);
+            if (btn) {
+                btn.classList.add('selected');
+                btn.classList.remove('bg-custom-light-yellow');
+            }
+        }
+
+        window.onload = () => {
+            filterMenu('all');
+        };
+    </script>
+</body>
+</html>

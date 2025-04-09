@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sprinkles Kitchen Menu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    .bg-custom-yellow { background-color: #fffbeb; }
+    .text-custom-brown { color: #78350f; }
+    .bg-custom-light-yellow { background-color: #fef3c7; }
+    .font-fancy { font-family: 'Dancing Script', cursive; }
+    .selected { background-color: white !important; }
+  </style>
+</head>
+<body class="bg-custom-yellow font-roboto flex flex-col min-h-screen">
+
+  <div class="fixed top-0 left-0 right-0 bg-custom-yellow p-4 shadow-md z-10">
+    <div class="text-center">
+      <h1 class="text-5xl font-fancy text-custom-brown">Sprinkles</h1>
+      <h2 class="text-2xl font-bold text-custom-brown">Kitchen Menu</h2>
+    </div>
+    <div class="flex justify-center mt-4 space-x-2">
+      <button id="orders-tab" class="text-custom-brown font-bold py-2 px-4 rounded-full selected" onclick="showTab('orders')">Orders</button>
+      <button id="menu-tab" class="text-custom-brown font-bold py-2 px-4 bg-custom-light-yellow rounded-full" onclick="showTab('menu')">Menu</button>
+      <button class="text-custom-brown font-bold py-2 px-4 bg-custom-light-yellow rounded-full" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="container mx-auto p-4 flex-grow mt-32">
+    <!-- Orders tab -->
+    <div id="orders" class="space-y-4 pt-16">
+      <h3 class="text-2xl font-bold text-custom-brown mb-4">Orders</h3>
+      <div id="order-list" class="space-y-2">
+        {% if orders %}
+          {% for order in orders %}
+          <div class="order bg-white p-4 rounded-lg shadow" data-order-id="{{ order[0] }}">
+            <h4 class="text-lg font-bold text-custom-brown">
+                Table {{ order[3] }} — Waiter: {{ order[5] }}
+            </h4>
+            <p class="text-sm text-gray-600 mb-2">Order #{{ order[0] }} • {{ order[4] }}</p>
+            <ul class="list-disc pl-5">
+                {% for item in order[1] %}
+                    <li class="text-custom-brown flex items-center">
+                        <input type="checkbox" class="form-checkbox h-5 w-5 text-custom-brown mr-2">
+                        {{ item.name }} (x{{ item.quantity }})
+                    </li>
+                {% endfor %}
+            </ul>
+            <p class="mt-2 text-sm text-gray-700">Status: 
+                <span class="inline-block rounded-full px-2 py-1 bg-yellow-100 text-yellow-700 font-semibold">
+                    {{ order[2].capitalize() }}
+                </span>
+            </p>
+            <button class="bg-custom-light-yellow text-custom-brown font-bold py-1 px-4 rounded-full mt-4" onclick="markOrderDone(this)">
+                Done
+            </button>
+        </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-custom-brown">No orders yet!</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Menu tab -->
+    <div id="menu" class="space-y-4 hidden pt-16">
+      <h3 class="text-2xl font-bold text-custom-brown mb-4">Menu</h3>
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button class="text-custom-brown font-bold py-1 px-3 rounded-full selected" onclick="filterMenu('all')">All</button>
+        {% set categories = menu_items | map(attribute='type') | unique | list %}
+        {% for cat in categories %}
+        <button class="text-custom-brown font-bold py-1 px-3 rounded-full bg-custom-light-yellow" onclick="filterMenu('{{ cat }}')">{{ cat }}</button>
+        {% endfor %}
+        <button class="ml-auto bg-custom-light-yellow text-custom-brown font-bold py-1 px-4 rounded-full" onclick="updateMenu()">Up. Menu</button>
+      </div>
+      <div id="menu-items" class="space-y-4">
+        {% for item in menu_items %}
+        <div class="menu-item flex justify-between items-center bg-white p-4 rounded-lg shadow" data-id="{{ item.id }}" data-category="{{ item.type }}">
+            <div>
+                <h3 class="text-lg font-bold text-custom-brown">{{ item.name }} - ₹{{ item.price }}</h3>
+            </div>
+            <div class="flex items-center space-x-2">
+                <input type="checkbox" id="{{ item.name }}-available" {% if item.available %}checked{% endif %} class="form-checkbox h-5 w-5 text-custom-brown">
+                <label for="{{ item.name }}-available" class="text-custom-brown">Available</label>
+            </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showTab(tab) {
+      document.getElementById('orders').classList.add('hidden');
+      document.getElementById('menu').classList.add('hidden');
+      document.getElementById('orders-tab').classList.remove('selected');
+      document.getElementById('orders-tab').classList.add('bg-custom-light-yellow');
+      document.getElementById('menu-tab').classList.remove('selected');
+      document.getElementById('menu-tab').classList.add('bg-custom-light-yellow');
+
+      if (tab === 'orders') {
+        document.getElementById('orders').classList.remove('hidden');
+        document.getElementById('orders-tab').classList.add('selected');
+        document.getElementById('orders-tab').classList.remove('bg-custom-light-yellow');
+      } else {
+        document.getElementById('menu').classList.remove('hidden');
+        document.getElementById('menu-tab').classList.add('selected');
+        document.getElementById('menu-tab').classList.remove('bg-custom-light-yellow');
+      }
+    }
+
+    function filterMenu(category) {
+        const items = document.querySelectorAll('.menu-item');
+        items.forEach(item => {
+          item.style.display = (category === 'all' || item.dataset.category === category) ? 'flex' : 'none';
+        });
+  
+        // Update button styles
+        const buttons = document.querySelectorAll('.flex.flex-wrap button');
+        buttons.forEach(btn => btn.classList.remove('selected', 'bg-white'));
+        const selectedButton = Array.from(buttons).find(btn => btn.innerText === category || (category === 'all' && btn.innerText === 'All'));
+        if (selectedButton) {
+          selectedButton.classList.add('selected');
+          selectedButton.classList.remove('bg-custom-light-yellow');
+        }
+    }
+
+    function updateMenu() {
+        const updated = [];
+        document.querySelectorAll('.menu-item').forEach(item => {
+            const name = item.querySelector('h3').innerText.split(' - ')[0];
+            const isAvailable = item.querySelector('input[type="checkbox"]').checked;
+            const id = item.dataset.id; // Ensure you have a data-id attribute in your HTML
+            updated.push({ id: id, available: isAvailable });
+        });
+    
+        fetch('/update_menu', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ updates: updated })
+        }).then(res => res.json()).then(data => {
+            alert('Menu updated!');
+        }).catch(() => alert('Failed to update menu.'));
+    }
+
+    function markOrderDone(button) {
+        const orderDiv = button.closest('.order'); // Get the closest order div
+        const orderId = orderDiv.dataset.orderId; // Get the order ID from the data attribute
+    
+        // Send a request to update the order status
+        fetch('/update_order_status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId }) // Send the order ID
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert('Order marked as delivered!');
+                orderDiv.remove(); // Optionally remove the order from the UI
+            } else {
+                alert('Failed to update order status: ' + data.message);
+            }
+        })
+        .catch(() => alert('Failed to update order status.'));
+    }
+
+    function logout() {
+        window.location.href = "/logout";
+      }
+
+    window.onload = () => {
+      showTab('orders');
+    };
+  </script>
+</body>
+</html>

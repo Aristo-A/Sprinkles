@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sprinkles Waiter Menu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <style>
+    .bg-custom-yellow { background-color: #fffbeb; }
+    .text-custom-brown { color: #78350f; }
+    .bg-custom-light-yellow { background-color: #fef3c7; }
+    .font-fancy { font-family: 'Dancing Script', cursive; }
+    .selected { background-color: white !important; }
+  </style>
+</head>
+<body class="bg-custom-yellow font-roboto flex flex-col min-h-screen">
+
+  <div class="fixed top-0 left-0 right-0 bg-custom-yellow p-4 shadow-md z-10">
+    <div class="text-center">
+      <h1 class="text-5xl font-fancy text-custom-brown">Sprinkles</h1>
+      <h2 class="text-2xl font-bold text-custom-brown">Waiter Menu</h2>
+    </div>
+    <div class="flex flex-wrap justify-center mt-4 space-x-1 space-y-1">
+      <button id="all-btn" class="text-custom-brown font-bold py-1 px-3 rounded-full selected" onclick="filterMenu('all')">All</button>
+      {% set categories = menu_items | map(attribute='type') | unique | list %}
+      {% for category in categories %}
+        <button id="{{ category }}-btn" class="text-custom-brown font-bold py-1 px-3 rounded-full bg-custom-light-yellow" onclick="filterMenu('{{ category }}')">{{ category }}</button>
+      {% endfor %}
+      <!-- Order summary button -->
+      <button id="order-btn" class="text-custom-brown font-bold py-1 px-3 rounded-full bg-custom-light-yellow" onclick="scrollToSummary()">▼(0)</button>
+    </div>
+  </div>
+
+  <div class="container mx-auto p-4 flex-grow mt-48">
+    <div id="menu-items" class="space-y-4">
+      {% for item in menu_items %}
+      <div class="menu-item flex justify-between items-center bg-white p-4 rounded-lg shadow" data-category="{{ item.type }}">
+        <div>
+          <h3 class="text-lg font-bold text-custom-brown">{{ item.name }} - ₹{{ item.price }}</h3>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button class="bg-custom-light-yellow text-custom-brown font-bold py-1 px-2 rounded-full" onclick="updateItem('{{ item.name }}', {{ item.price }}, -1)">-</button>
+          <span id="{{ item.name }}-count" class="text-custom-brown">0</span>
+          <button class="bg-custom-light-yellow text-custom-brown font-bold py-1 px-2 rounded-full" onclick="updateItem('{{ item.name }}', {{ item.price }}, 1)">+</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div id="order-summary-container" class="mt-8 mb-16">
+      <h3 class="text-2xl font-bold text-custom-brown mb-4">Order Summary</h3>
+      <div id="order-summary" class="space-y-2 bg-white p-4 rounded-lg shadow"></div>
+      <div class="text-right mt-4">
+        <p class="text-xl font-bold text-custom-brown">Subtotal: <span id="subtotal">₹0</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="fixed bottom-0 left-0 right-0 mb-4 flex justify-center space-x-2">
+    <button class="bg-custom-light-yellow text-custom-brown font-bold py-2 px-4 rounded-full" onclick="logout()">Logout</button>
+    <select id="table-number" name="table-number" class="w-24 p-2 border border-custom-light-yellow rounded" required>
+      <option value="" disabled selected>Table No</option>
+      {% for i in range(1, 11) %}
+      <option value="{{ i }}">{{ i }}</option>
+      {% endfor %}
+    </select>
+    <button class="bg-custom-light-yellow text-custom-brown font-bold py-2 px-4 rounded-full" onclick="generateBill()">Generate Bill</button>
+  </div>
+
+  <script>
+    let subtotal = 0;
+    const order = {};
+
+    function updateItem(itemName, itemPrice, change) {
+      if (!order[itemName]) {
+        order[itemName] = 0;
+      }
+      order[itemName] += change;
+      if (order[itemName] < 0) {
+        order[itemName] = 0;
+      }
+      document.getElementById(`${itemName}-count`).innerText = order[itemName];
+      updateOrderSummary();
+    }
+
+    function updateOrderSummary() {
+      const orderSummary = document.getElementById('order-summary');
+      orderSummary.innerHTML = '';
+      subtotal = 0;
+      for (const item in order) {
+        if (order[item] > 0) {
+          const orderItem = document.createElement('div');
+          orderItem.className = 'flex justify-between items-center';
+          orderItem.innerHTML = `
+            <p class="text-custom-brown">${item}</p>
+            <p class="text-custom-brown">₹${order[item] * getItemPrice(item)}</p>
+          `;
+          orderSummary.appendChild(orderItem);
+          subtotal += order[item] * getItemPrice(item);
+        }
+      }
+      document.getElementById('subtotal').innerText = `₹${subtotal}`;
+      document.getElementById('order-btn').innerText = `▼(${getTotalItems()})`;
+    }
+
+    function getTotalItems() {
+      return Object.values(order).reduce((sum, qty) => sum + qty, 0);
+    }
+
+    function getItemPrice(itemName) {
+      {% for item in menu_items %}
+      if (itemName === '{{ item.name }}') return {{ item.price }};
+      {% endfor %}
+      return 0;
+    }
+
+    function getItemId(itemName) {
+      {% for item in menu_items %}
+      if (itemName === '{{ item.name }}') return {{ item.id }};
+      {% endfor %}
+      return null;
+    }
+
+    function filterMenu(category) {
+      const items = document.querySelectorAll('.menu-item');
+      items.forEach(item => {
+        if (category === 'all' || item.getAttribute('data-category') === category) {
+          item.style.display = 'flex';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+
+      document.querySelectorAll('button').forEach(button => {
+        if (button.id.endsWith('-btn') || button.id === 'all-btn') {
+          button.classList.remove('selected');
+          button.classList.remove('bg-white');
+          button.classList.add('bg-custom-light-yellow');
+        }
+      });
+
+      const selectedBtn = document.getElementById(`${category}-btn`);
+      if (selectedBtn) {
+        selectedBtn.classList.add('selected');
+        selectedBtn.classList.remove('bg-custom-light-yellow');
+      } else if (category === 'all') {
+        document.getElementById('all-btn').classList.add('selected');
+        document.getElementById('all-btn').classList.remove('bg-custom-light-yellow');
+      }
+    }
+
+    function scrollToSummary() {
+      const summary = document.getElementById("order-summary-container");
+      if (summary) {
+        summary.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    function logout() {
+      window.location.href = "/logout";
+    }
+
+    function generateBill() {
+      const tableNumber = document.getElementById('table-number').value;
+      if (!tableNumber) {
+        alert('Please select a table number.');
+        return;
+      }
+
+      const itemsToSend = [];
+      for (const itemName in order) {
+        if (order[itemName] > 0) {
+          itemsToSend.push({
+            name: itemName,
+            quantity: order[itemName],
+            id: getItemId(itemName)
+          });
+        }
+      }
+
+      fetch('/generate_bill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          table_no: tableNumber,
+          items: itemsToSend
+        })
+      }).then(response => {
+        if (response.ok) {
+          alert('Order submitted successfully!');
+          window.location.reload();
+        } else {
+          alert('Failed to submit order.');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
