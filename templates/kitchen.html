@@ -150,7 +150,7 @@
         const orderId = orderDiv.dataset.orderId; // Get the order ID from the data attribute
     
         // Send a request to update the order status
-        fetch('/update_order_status', {
+        fetch('/update_order_status_kitchen', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ order_id: orderId }) // Send the order ID
